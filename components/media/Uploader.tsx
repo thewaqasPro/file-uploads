@@ -12,7 +12,7 @@ import { Loader2, Trash2, Library, CheckCircle } from "lucide-react";
 import { MediaLibrary } from "./MediaLibrary";
 import { Checkbox } from "../ui/checkbox";
 import { Label } from "../ui/label";
-import NextImage from "next/image";
+import Image from "next/image";
 
 // Define the interface for a category object (matching your API response)
 interface Category {
@@ -530,18 +530,19 @@ export function Uploader() {
                 <div key={id} className="flex flex-col gap-1">
                   <div className="relative aspect-square rounded-lg overflow-hidden border border-border">
                     {/* Display image preview, fall back to placeholder if objectUrl is missing */}
-                    <NextImage
+                    <Image
                       src={
                         objectUrl ||
                         `https://placehold.co/150x150/e0e0e0/000000?text=No+Preview`
                       }
                       alt={file.name}
                       className="w-full h-full object-cover"
-                      onError={(e) => {
+                      onError={(e: any) => {
                         // Fallback for broken image previews
                         e.currentTarget.onerror = null;
                         e.currentTarget.src = `https://placehold.co/150x150/e0e0e0/000000?text=Error`;
                       }}
+                      fill
                     />
 
                     <Button

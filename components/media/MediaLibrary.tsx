@@ -10,11 +10,11 @@ import {
   DialogDescription,
 } from "../ui/dialog";
 import { Button } from "../ui/button";
-import { Loader2, Trash2, Image as ImageIcon, Pencil, Eye } from "lucide-react"; // Import Eye icon for view
+import { Loader2, Trash2, Image as ImageIcon, Pencil, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { EditImageDialog } from "./EditImageDialog";
-import { ViewImageDialog } from "./ViewImageDialog"; // Import the new ViewImageDialog component
+import { ViewImageDialog } from "./ViewImageDialog";
 import {
   Select,
   SelectContent,
@@ -22,7 +22,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../ui/select";
-import Image from "next/image";
 
 // Define the interface for an image object received from the API
 interface Category {
@@ -234,6 +233,7 @@ export function MediaLibrary({
           </DialogDescription>
         </DialogHeader>
       </Dialog>
+
       {/* Category Filter */}
       <div className="w-full mb-4">
         {fetchingCategories ? (
@@ -279,14 +279,22 @@ export function MediaLibrary({
                 key={image.id}
                 className="relative aspect-square rounded-lg overflow-hidden border border-border group"
               >
-                <Image
+                <img
                   src={image.url}
                   alt={image.title}
                   className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105 cursor-pointer"
                   onClick={() => onImageSelect(image.url)}
                   onError={(e) => {
+                    // Fallback for broken images: show a generic icon or placeholder
+                    // This handles cases where SVG/GIF might be blocked by CSP
                     e.currentTarget.onerror = null;
-                    e.currentTarget.src = `https://placehold.co/150x150/e0e0e0/000000?text=Image+Error`;
+                    e.currentTarget.src = `https://placehold.co/150x150/e0e0e0/000000?text=Error`;
+                    // You could also specifically check for SVG/GIF and use a different placeholder
+                    // if (image.url.endsWith('.svg') || image.url.endsWith('.gif')) {
+                    //   e.currentTarget.src = `/path/to/svg-gif-placeholder.png`;
+                    // } else {
+                    //   e.currentTarget.src = `https://placehold.co/150x150/e0e0e0/000000?text=Error`;
+                    // }
                   }}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex flex-col justify-end p-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
@@ -294,9 +302,9 @@ export function MediaLibrary({
                   {isStandalone && (
                     <div className="absolute top-2 right-2 flex space-x-2">
                       <Button
-                        variant="default"
+                        variant="ghost"
                         size="icon"
-                        className="rounded-full"
+                        className="rounded-full bg-white/30 hover:bg-white/50 text-white hover:text-gray-900"
                         onClick={(e) => {
                           e.stopPropagation(); // Prevent image select when clicking view
                           handleViewClick(image);
@@ -306,9 +314,9 @@ export function MediaLibrary({
                         <Eye className="h-4 w-4" />
                       </Button>
                       <Button
-                        variant="secondary"
+                        variant="ghost"
                         size="icon"
-                        className="rounded-full"
+                        className="rounded-full bg-white/30 hover:bg-white/50 text-white hover:text-gray-900"
                         onClick={(e) => {
                           e.stopPropagation(); // Prevent image select when clicking edit
                           handleEditClick(image);

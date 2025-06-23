@@ -51,7 +51,7 @@ export function ViewImageDialog({
         </DialogHeader>
 
         <div className="flex-grow flex items-center justify-center overflow-hidden p-2">
-          <Image
+          <img
             src={image.url}
             alt={image.title}
             className="max-w-full max-h-[70vh] object-contain rounded-md shadow-lg"
