@@ -22,6 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../ui/select";
+import Image from "next/image";
 
 // Define the interface for an image object received from the API
 interface Category {
@@ -278,7 +279,7 @@ export function MediaLibrary({
                 key={image.id}
                 className="relative aspect-square rounded-lg overflow-hidden border border-border group"
               >
-                <img
+                <Image
                   src={image.url}
                   alt={image.title}
                   className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105 cursor-pointer"

@@ -1,7 +1,7 @@
 // components/web/EditImageDialog.tsx
 "use client";
 
-import React, { useState, useEffect, useCallback, FormEvent } from "react";
+import React, { useState, useEffect, FormEvent } from "react";
 import {
   Dialog,
   DialogContent,
@@ -126,7 +126,7 @@ export function EditImageDialog({
           <DialogTitle>Edit Image Details</DialogTitle>
           <DialogDescription>
             Make changes to the image title and categories here. Click save when
-            you're done.
+            you&apos;re done.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="grid gap-4 py-4">

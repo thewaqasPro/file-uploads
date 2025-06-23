@@ -5,6 +5,7 @@ import { PrismaClient } from "./generated/prisma";
 // Declare a global variable for PrismaClient to avoid multiple instantiations in development
 // This is necessary for Next.js hot-reloading to prevent issues with multiple PrismaClient instances
 declare global {
+  // eslint-disable-next-line no-var
   var prisma: PrismaClient | undefined;
 }
 

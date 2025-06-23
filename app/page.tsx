@@ -1,6 +1,5 @@
 // app/page.tsx
 import { Button } from "@/components/ui/button";
-import { Uploader } from "@/components/media/Uploader"; // Assuming Uploader is in this path
 import Link from "next/link";
 
 export default function Home() {
@@ -12,7 +11,6 @@ export default function Home() {
       <Link href={"/media"}>
         <Button>Media Library</Button>
       </Link>
-      {/* <Uploader /> */}
     </div>
   );
 }

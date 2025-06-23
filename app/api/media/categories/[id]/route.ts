@@ -1,37 +1,34 @@
-// app/api/categories/[id]/route.ts (This should be in your app/api/media/categories/[id]/route.ts path)
+// app/api/media/categories/[id]/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-
-// Define a more flexible context interface for route handlers
-// This helps to accommodate potential slight variations in how Next.js
-// infers the `params` object in complex or nested route structures.
-interface RouteContext {
-  params: {
-    [key: string]: string | string[] | undefined; // Allows for any string key, accommodating potential extra params
-    id: string; // Explicitly ensures the 'id' parameter is present as a string
-  };
-}
 
 /**
  * Handles DELETE requests to remove a category by its ID.
  * @param {Request} request - The incoming request object.
- * @param {RouteContext} context - The context object containing route parameters.
+ * @param {Object} params - The object containing route parameters.
+ * @param {string} params.id - The ID of the category to delete.
  * @returns {NextResponse} A JSON response indicating success or failure.
  */
+
 export async function DELETE(
   request: Request,
-  context: RouteContext // Use the more flexible RouteContext type
+  context: { params: Promise<{ id: string }> }
 ) {
+  const { params } = context; // context.params is a Promise now
+  const { id } = await params; // Await the promise to get the id
+
   try {
-    // Validate that context.params and context.params.id exist
-    if (!context.params || !context.params.id) {
+    // Validate that params.id exists
+    // The inline type already ensures `params` and `params.id` are defined,
+    // but a runtime check adds robustness against unexpected scenarios.
+    if (!id) {
       return NextResponse.json(
         { error: "Category ID not provided in route parameters." },
         { status: 400 }
       );
     }
 
-    const categoryId = parseInt(context.params.id, 10); // Parse the category ID from the URL parameters
+    const categoryId = parseInt(id, 10); // Parse the category ID from the URL parameters
 
     if (isNaN(categoryId)) {
       // If the ID is not a valid number, return a 400 Bad Request error

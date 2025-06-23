@@ -19,11 +19,14 @@ const updateImageSchema = z.object({
  */
 export async function PATCH(
   request: Request,
-  context: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
+  const { params } = context; // context.params is a Promise now
+  const { id } = await params; // Await the promise to get the id
+
   try {
-    // Validate that context.params and context.params.id exist
-    if (!context.params || !context.params.id) {
+    // Validate that context.params and id exist
+    if (!params || !id) {
       return NextResponse.json(
         { error: "Image ID not provided in route parameters." },
         { status: 400 }
@@ -31,7 +34,7 @@ export async function PATCH(
     }
 
     // Parse image ID from URL. parseInt is synchronous, no await needed.
-    const imageId = parseInt(context.params.id, 10);
+    const imageId = parseInt(id, 10);
 
     if (isNaN(imageId)) {
       return NextResponse.json(
