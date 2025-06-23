@@ -10,6 +10,14 @@ import { toast } from "sonner";
 import { v4 as uuidv4 } from "uuid";
 import { Loader2, Trash2, Library, CheckCircle } from "lucide-react"; // Added Library and CheckCircle icons
 import { MediaLibrary } from "./MediaLibrary"; // Import the MediaLibrary component
+import { Checkbox } from "../ui/checkbox"; // Assuming you have a Checkbox component from shadcn/ui
+import { Label } from "../ui/label"; // Assuming you have a Label component from shadcn/ui
+
+// Define the interface for a category object (matching your API response)
+interface Category {
+  id: number;
+  name: string;
+}
 
 export function Uploader() {
   const [files, setFiles] = useState<
@@ -26,6 +34,41 @@ export function Uploader() {
   >([]);
   const [isMediaLibraryOpen, setIsMediaLibraryOpen] = useState(false); // State for Media Library modal visibility
   const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null); // State for selected image from Media Library
+
+  // New state for categories and selected categories
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<number[]>([]);
+  const [fetchingCategories, setFetchingCategories] = useState(true);
+
+  // Function to fetch all categories from the API
+  const fetchCategories = useCallback(async () => {
+    setFetchingCategories(true);
+    try {
+      const response = await fetch("/api/media/categories");
+      if (!response.ok) {
+        throw new Error("Failed to fetch categories");
+      }
+      const data: Category[] = await response.json();
+      setCategories(data);
+    } catch (error) {
+      console.error("Error fetching categories:", error);
+      toast.error("Failed to load categories for selection.");
+    } finally {
+      setFetchingCategories(false);
+    }
+  }, []);
+
+  // Effect hook to fetch categories on component mount
+  useEffect(() => {
+    fetchCategories();
+  }, [fetchCategories]);
+
+  // Handle checkbox change for categories
+  const handleCategoryChange = (categoryId: number, isChecked: boolean) => {
+    setSelectedCategoryIds((prev) =>
+      isChecked ? [...prev, categoryId] : prev.filter((id) => id !== categoryId)
+    );
+  };
 
   // Function to remove a file from S3 and local state
   async function removeFile(fileId: string) {
@@ -91,10 +134,11 @@ export function Uploader() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          title: file.name,
           filename: file.name,
           contentType: file.type,
           size: file.size,
+          title: file.name, // Default title to filename for now
+          categoryIds: selectedCategoryIds, // Pass selected category IDs
         }),
       });
 
@@ -180,24 +224,27 @@ export function Uploader() {
   };
 
   // Callback for when files are dropped or selected
-  const onDrop = useCallback((acceptedFiles: File[]) => {
-    if (acceptedFiles.length) {
-      setFiles((prevFiles) => [
-        ...prevFiles,
-        ...acceptedFiles.map((file) => ({
-          id: uuidv4(),
-          file,
-          uploading: false,
-          progress: 0,
-          isDeleting: false,
-          error: false,
-          objectUrl: URL.createObjectURL(file), // Create a temporary object URL for immediate preview
-        })),
-      ]);
+  const onDrop = useCallback(
+    (acceptedFiles: File[]) => {
+      if (acceptedFiles.length) {
+        setFiles((prevFiles) => [
+          ...prevFiles,
+          ...acceptedFiles.map((file) => ({
+            id: uuidv4(),
+            file,
+            uploading: false,
+            progress: 0,
+            isDeleting: false,
+            error: false,
+            objectUrl: URL.createObjectURL(file), // Create a temporary object URL for immediate preview
+          })),
+        ]);
 
-      acceptedFiles.forEach(uploadFile); // Start upload for each accepted file
-    }
-  }, []);
+        acceptedFiles.forEach(uploadFile); // Start upload for each accepted file
+      }
+    },
+    [selectedCategoryIds]
+  ); // Added selectedCategoryIds as a dependency
 
   // Callback for when files are rejected (e.g., too many, too large)
   const rejectedFiles = useCallback((fileRejection: FileRejection[]) => {
@@ -211,7 +258,7 @@ export function Uploader() {
       );
 
       if (tooManyFiles) {
-        toast.error("Too many files selected, max is 20");
+        toast.error("Too many files selected, max is 5");
       }
 
       if (fileSizeTooBig) {
@@ -224,7 +271,7 @@ export function Uploader() {
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     onDropRejected: rejectedFiles,
-    maxFiles: 20, // Maximum 20 files at a time
+    maxFiles: 5, // Maximum 5 files at a time
     maxSize: 1024 * 1024 * 10, // 10mb limit
     accept: {
       "image/*": [], // Only accept image files
@@ -279,6 +326,38 @@ export function Uploader() {
           )}
         </CardContent>
       </Card>
+
+      {/* Category Selection */}
+      <div className="w-full max-w-2xl mt-4 p-4 bg-card rounded-lg shadow-md">
+        <h3 className="text-lg font-semibold mb-3">Select Categories:</h3>
+        {fetchingCategories ? (
+          <div className="flex items-center text-muted-foreground">
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Loading
+            categories...
+          </div>
+        ) : categories.length === 0 ? (
+          <p className="text-muted-foreground">
+            No categories available. Please add some on the Categories page.
+          </p>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-y-2 gap-x-4">
+            {categories.map((category) => (
+              <div key={category.id} className="flex items-center space-x-2">
+                <Checkbox
+                  id={`category-${category.id}`}
+                  checked={selectedCategoryIds.includes(category.id)}
+                  onCheckedChange={(checked) =>
+                    handleCategoryChange(category.id, !!checked)
+                  }
+                />
+                <Label htmlFor={`category-${category.id}`}>
+                  {category.name}
+                </Label>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       <div className="flex justify-center mt-4">
         <Button
@@ -347,7 +426,7 @@ export function Uploader() {
                       {isDeleting ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
                       ) : (
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="h-4 w-4" />
                       )}
                     </Button>
                     {uploading && !isDeleting && (
@@ -375,7 +454,6 @@ export function Uploader() {
 
       {/* Media Library Component */}
       <MediaLibrary
-        // isStandalone={true}
         isOpen={isMediaLibraryOpen}
         onClose={() => setIsMediaLibraryOpen(false)}
         onImageSelect={handleImageSelectFromLibrary}
