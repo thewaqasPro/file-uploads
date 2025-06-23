@@ -1,0 +1,36 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Define the Image model
+model Image {
+  id        Int        @id @default(autoincrement()) // Unique identifier for the image, auto-incrementing
+  title     String     @db.VarChar(255)            // Title of the image
+  s3Key     String     @unique @map("s3_key") @db.VarChar(255) // Unique key for the S3 object, mapped to s3_key column
+  url       String     @db.Text                   // Public URL of the image on S3
+  createdAt DateTime   @default(now()) @map("createdAt") @db.Timestamptz() // Timestamp of creation, mapped to createdAt column
+  categories ImageCategories[] // A list of categories this image belongs to (many-to-many relationship)
+
+  @@map("images") // Maps this model to the 'images' table in the database
+}
+
+// Define the Category model
+model ImageCategories {
+  id        Int     @id @default(autoincrement()) // Unique identifier for the category, auto-incrementing
+  name      String  @unique @db.VarChar(255) // Name of the category, must be unique
+  images    Image[] // A list of images that belong to this category (many-to-many relationship)
+
+  @@map("imageCategories") // Maps this model to the 'categories' table in the database
+}
