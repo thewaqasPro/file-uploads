@@ -105,8 +105,8 @@ export default function CategoriesPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center p-4 bg-background">
-      <h1 className="text-4xl font-bold mb-8 text-center">Category Manager</h1>
+    <div className="min-h-screen flex flex-col p-4 bg-background">
+      <h1 className="text-4xl font-bold mb-8">Category Manager</h1>
 
       {/* Add New Category Form */}
       <div className="w-full max-w-md bg-card p-6 rounded-lg shadow-md mb-8">

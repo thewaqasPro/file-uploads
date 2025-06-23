@@ -6,7 +6,6 @@ import { S3 } from "@/lib/S3Client";
 import { z } from "zod";
 
 import { prisma } from "@/lib/db"; // Import the database query function
-import { title } from "process";
 
 const uploeadRequestSchema = z.object({
   title: z.string().optional(),

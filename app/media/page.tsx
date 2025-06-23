@@ -2,7 +2,7 @@
 "use client";
 
 import { useState } from "react";
-import { MediaLibrary } from "@/components/web/MediaLibrary"; // Import the MediaLibrary component
+import { MediaLibrary } from "@/components/media/MediaLibrary"; // Import the MediaLibrary component
 import { CheckCircle } from "lucide-react"; // Import CheckCircle icon for selected image display
 
 export default function MediaPage() {
@@ -15,11 +15,11 @@ export default function MediaPage() {
   };
 
   return (
-    <div className="flex flex-col items-center p-4 bg-background max-w-7xl mx-auto">
-      <h1 className="text-4xl font-bold mb-8 text-center">Your Media Assets</h1>
+    <div className="flex flex-col p-4 bg-background max-w-7xl">
+      <h1 className="text-4xl font-bold mb-8">Media Library</h1>
 
       {selectedImageUrl && (
-        <div className="mt-4 mb-8 p-4 border rounded-lg bg-green-50 dark:bg-green-900/20 flex items-center gap-3 w-full max-w-7xl mx-auto">
+        <div className="mt-4 mb-8 p-4 border rounded-lg bg-green-50 dark:bg-green-900/20 flex items-center gap-3 w-full max-w-7xl">
           <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
           <p className="text-sm text-green-800 dark:text-green-200">
             Selected Image URL:{" "}

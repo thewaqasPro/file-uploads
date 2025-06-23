@@ -8,10 +8,10 @@ import { FileRejection, useDropzone } from "react-dropzone";
 import { useCallback, useState, useEffect } from "react";
 import { toast } from "sonner";
 import { v4 as uuidv4 } from "uuid";
-import { Loader2, Trash2, Library, CheckCircle } from "lucide-react"; // Added Library and CheckCircle icons
-import { MediaLibrary } from "./MediaLibrary"; // Import the MediaLibrary component
-import { Checkbox } from "../ui/checkbox"; // Assuming you have a Checkbox component from shadcn/ui
-import { Label } from "../ui/label"; // Assuming you have a Label component from shadcn/ui
+import { Loader2, Trash2, Library, CheckCircle } from "lucide-react";
+import { MediaLibrary } from "./MediaLibrary";
+import { Checkbox } from "../ui/checkbox";
+import { Label } from "../ui/label";
 
 // Define the interface for a category object (matching your API response)
 interface Category {
@@ -23,17 +23,18 @@ export function Uploader() {
   const [files, setFiles] = useState<
     Array<{
       id: string;
-      file: File;
+      file: File; // This will be the optimized file after processing
+      originalFile: File; // Keep a reference to the original file for debugging/logging
       uploading: boolean;
       progress: number;
       key?: string;
       isDeleting: boolean;
       error: boolean;
-      objectUrl?: string; // Client-side URL for preview
+      objectUrl?: string; // Client-side URL for preview (of optimized image)
     }>
   >([]);
-  const [isMediaLibraryOpen, setIsMediaLibraryOpen] = useState(false); // State for Media Library modal visibility
-  const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null); // State for selected image from Media Library
+  const [isMediaLibraryOpen, setIsMediaLibraryOpen] = useState(false);
+  const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
 
   // New state for categories and selected categories
   const [categories, setCategories] = useState<Category[]>([]);
@@ -69,6 +70,94 @@ export function Uploader() {
       isChecked ? [...prev, categoryId] : prev.filter((id) => id !== categoryId)
     );
   };
+
+  /**
+   * Optimizes an image for web by resizing and compressing it.
+   * Converts to WebP format. Skips optimization for SVG and GIF files.
+   * @param {File} imageFile - The original image file.
+   * @param {number} maxWidth - The maximum width for the output image.
+   * @param {number} quality - WebP compression quality (0.0 to 1.0).
+   * @returns {Promise<File>} A promise that resolves to the optimized image file or the original file if not optimized.
+   */
+  const optimizeImage = useCallback(
+    (
+      imageFile: File,
+      maxWidth: number,
+      quality: number = 0.8
+    ): Promise<File> => {
+      return new Promise((resolve, reject) => {
+        // Skip optimization for SVG and GIF files
+        if (
+          imageFile.type === "image/svg+xml" ||
+          imageFile.type === "image/gif"
+        ) {
+          resolve(imageFile); // Resolve with the original file
+          return;
+        }
+
+        const reader = new FileReader();
+        reader.readAsDataURL(imageFile);
+        reader.onload = (event) => {
+          const img = new Image();
+          img.src = event.target?.result as string;
+          img.onload = () => {
+            const canvas = document.createElement("canvas");
+            let width = img.width;
+            let height = img.height;
+
+            // Calculate new dimensions to fit within maxWidth while maintaining aspect ratio
+            if (width > maxWidth) {
+              height = Math.round((height * maxWidth) / width);
+              width = maxWidth;
+            }
+            // If you wanted to constrain by height as well:
+            // if (height > maxHeight) {
+            //   width = Math.round((width * maxHeight) / height);
+            //   height = maxHeight;
+            // }
+
+            canvas.width = width;
+            canvas.height = height;
+
+            const ctx = canvas.getContext("2d");
+            if (!ctx) {
+              reject(new Error("Could not get canvas context."));
+              return;
+            }
+            ctx.drawImage(img, 0, 0, width, height);
+
+            // Determine the new filename with .webp extension
+            const originalNameParts = imageFile.name.split(".");
+            const nameWithoutExtension = originalNameParts
+              .slice(0, -1)
+              .join(".");
+            const newFileName = `${nameWithoutExtension}.webp`;
+
+            // Convert canvas content to Blob, then to File
+            canvas.toBlob(
+              (blob) => {
+                if (blob) {
+                  const optimizedFile = new File([blob], newFileName, {
+                    // Use newFileName
+                    type: "image/webp", // Force WEBP for better compression
+                    lastModified: Date.now(),
+                  });
+                  resolve(optimizedFile);
+                } else {
+                  reject(new Error("Canvas to Blob conversion failed."));
+                }
+              },
+              "image/webp",
+              quality
+            ); // Use image/webp for compression
+          };
+          img.onerror = (error) => reject(error);
+        };
+        reader.onerror = (error) => reject(error);
+      });
+    },
+    []
+  );
 
   // Function to remove a file from S3 and local state
   async function removeFile(fileId: string) {
@@ -122,10 +211,13 @@ export function Uploader() {
   }
 
   // Function to upload a single file to S3 via presigned URL
-  const uploadFile = async (file: File) => {
+  const uploadFile = async (file: File, originalFile: File) => {
     // Mark the file as uploading in the state
-    setFiles((prevFiles) =>
-      prevFiles.map((f) => (f.file === file ? { ...f, uploading: true } : f))
+    setFiles(
+      (prevFiles) =>
+        prevFiles.map((f) =>
+          f.file === originalFile ? { ...f, uploading: true } : f
+        ) // Use originalFile for matching
     );
 
     try {
@@ -147,7 +239,7 @@ export function Uploader() {
         // Update file state to reflect error
         setFiles((prevFiles) =>
           prevFiles.map((f) =>
-            f.file === file
+            f.file === originalFile // Match by original file
               ? { ...f, uploading: false, progress: 0, error: true }
               : f
           )
@@ -168,7 +260,7 @@ export function Uploader() {
             // Update progress in the file state
             setFiles((prevFiles) =>
               prevFiles.map((f) =>
-                f.file === file
+                f.file === originalFile // Match by original file
                   ? { ...f, progress: Math.round(percentComplete), key: key }
                   : f
               )
@@ -181,7 +273,7 @@ export function Uploader() {
           if (xhr.status === 200 || xhr.status === 204) {
             setFiles((prevFiles) =>
               prevFiles.map((f) =>
-                f.file === file
+                f.file === originalFile // Match by original file
                   ? {
                       ...f,
                       progress: 100,
@@ -189,7 +281,8 @@ export function Uploader() {
                       error: false,
                       key: key,
                       objectUrl: imageUrl,
-                    } // Update objectUrl to actual S3 URL
+                      file: file,
+                    } // Update file to optimized and objectUrl to S3 URL
                   : f
               )
             );
@@ -215,7 +308,7 @@ export function Uploader() {
       // Update file state to reflect error
       setFiles((prevFiles) =>
         prevFiles.map((f) =>
-          f.file === file
+          f.file === originalFile // Match by original file
             ? { ...f, uploading: false, progress: 0, error: true }
             : f
         )
@@ -225,26 +318,58 @@ export function Uploader() {
 
   // Callback for when files are dropped or selected
   const onDrop = useCallback(
-    (acceptedFiles: File[]) => {
+    async (acceptedFiles: File[]) => {
       if (acceptedFiles.length) {
-        setFiles((prevFiles) => [
-          ...prevFiles,
-          ...acceptedFiles.map((file) => ({
-            id: uuidv4(),
-            file,
-            uploading: false,
-            progress: 0,
-            isDeleting: false,
-            error: false,
-            objectUrl: URL.createObjectURL(file), // Create a temporary object URL for immediate preview
-          })),
-        ]);
+        const filesToProcess = acceptedFiles.map((file) => ({
+          id: uuidv4(),
+          file: file, // Initially, this is the original file
+          originalFile: file, // Keep reference to original
+          uploading: false,
+          progress: 0,
+          isDeleting: false,
+          error: false,
+          objectUrl: URL.createObjectURL(file), // Create a temporary object URL for immediate preview of original
+        }));
+        setFiles((prevFiles) => [...prevFiles, ...filesToProcess]);
 
-        acceptedFiles.forEach(uploadFile); // Start upload for each accepted file
+        // Process and upload each file
+        for (const fileItem of filesToProcess) {
+          try {
+            // Optimize the image before proceeding with upload
+            // You can choose 1920 or 1080 for maxWidth
+            const optimizedFile = await optimizeImage(fileItem.file, 1920, 0.8); // Max 1920px width, 80% quality
+            // Revoke the original object URL to free memory, create new for optimized
+            URL.revokeObjectURL(fileItem.objectUrl);
+            const newObjectUrl = URL.createObjectURL(optimizedFile);
+
+            // Update the fileItem in state to reference the optimized file and its URL
+            setFiles((prevFiles) =>
+              prevFiles.map((f) =>
+                f.id === fileItem.id
+                  ? { ...f, file: optimizedFile, objectUrl: newObjectUrl }
+                  : f
+              )
+            );
+
+            // Now upload the optimized file
+            uploadFile(optimizedFile, fileItem.originalFile); // Pass original for state matching
+          } catch (error) {
+            console.error("Error optimizing image:", error);
+            toast.error(`Failed to optimize ${fileItem.file.name}`);
+            // Mark as error if optimization fails
+            setFiles((prevFiles) =>
+              prevFiles.map((f) =>
+                f.id === fileItem.id
+                  ? { ...f, error: true, uploading: false }
+                  : f
+              )
+            );
+          }
+        }
       }
     },
-    [selectedCategoryIds]
-  ); // Added selectedCategoryIds as a dependency
+    [selectedCategoryIds, optimizeImage]
+  );
 
   // Callback for when files are rejected (e.g., too many, too large)
   const rejectedFiles = useCallback((fileRejection: FileRejection[]) => {
@@ -272,9 +397,9 @@ export function Uploader() {
     onDrop,
     onDropRejected: rejectedFiles,
     maxFiles: 5, // Maximum 5 files at a time
-    maxSize: 1024 * 1024 * 10, // 10mb limit
+    maxSize: 1024 * 1024 * 10, // 10mb limit for original file size
     accept: {
-      "image/*": [], // Only accept image files
+      "image/*": [], // Only accept image files (any type will be converted to webp)
     },
   });
 
@@ -282,8 +407,9 @@ export function Uploader() {
   useEffect(() => {
     return () => {
       files.forEach((file) => {
+        // Only revoke if it's a temporary client-side URL (not yet uploaded to S3)
+        // or if it was the original objectUrl that has now been replaced by optimized one
         if (file.objectUrl && !file.key) {
-          // Only revoke if it's a temporary client-side URL (not yet uploaded to S3)
           URL.revokeObjectURL(file.objectUrl);
         }
       });
@@ -426,7 +552,7 @@ export function Uploader() {
                       {isDeleting ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
                       ) : (
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="w-4 h-4" />
                       )}
                     </Button>
                     {uploading && !isDeleting && (

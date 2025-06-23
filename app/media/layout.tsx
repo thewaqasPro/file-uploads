@@ -40,10 +40,6 @@ export default function Page({
               <BreadcrumbItem className="hidden md:block">
                 <BreadcrumbLink href="#">Media</BreadcrumbLink>
               </BreadcrumbItem>
-              <BreadcrumbSeparator className="hidden md:block" />
-              <BreadcrumbItem>
-                <BreadcrumbPage>Manager</BreadcrumbPage>
-              </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
           <div className="ml-auto">
