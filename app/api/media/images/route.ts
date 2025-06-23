@@ -1,4 +1,4 @@
-// app/api/images/route.ts
+// app/api/media/images/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db"; // Import the Prisma client
 

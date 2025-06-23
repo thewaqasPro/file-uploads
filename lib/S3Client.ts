@@ -2,12 +2,20 @@ import "server-only";
 
 import { S3Client } from "@aws-sdk/client-s3";
 
+// export const S3 = new S3Client({
+//   region: "auto",
+//   endpoint: "https://t3.storage.dev",
+//   forcePathStyle: false,
+// });
+
+// import { S3Client } from "@aws-sdk/client-s3";
+
 export const S3 = new S3Client({
-  endpoint: process.env.S3_ENDPOINT_URL!,
-  region: process.env.S3_REGION!,
+  endpoint: "https://minio.waqas.pro", // or your server IP
+  region: "us-east-1",
   credentials: {
-    accessKeyId: process.env.S3_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.S3_SECRET_ACCESS_KEY!,
+    accessKeyId: "AZzLppRosfvmCxb7",
+    secretAccessKey: "TZ5NMcqWXLVoqLm8DLLZpp3sxW3LrVTE",
   },
-  forcePathStyle: true,
+  forcePathStyle: true, // Important for MinIO
 });

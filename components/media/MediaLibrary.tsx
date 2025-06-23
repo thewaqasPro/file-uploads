@@ -10,17 +10,18 @@ import {
   DialogDescription,
 } from "../ui/dialog";
 import { Button } from "../ui/button";
-import { Loader2, Trash2, Image as ImageIcon, Pencil } from "lucide-react";
+import { Loader2, Trash2, Image as ImageIcon, Pencil, Eye } from "lucide-react"; // Import Eye icon for view
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { EditImageDialog } from "./EditImageDialog";
+import { ViewImageDialog } from "./ViewImageDialog"; // Import the new ViewImageDialog component
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../ui/select"; // Assuming you have these shadcn/ui Select components
+} from "../ui/select";
 
 // Define the interface for an image object received from the API
 interface Category {
@@ -62,6 +63,10 @@ export function MediaLibrary({
   // States for image editing functionality
   const [isEditDialogOpen, setIsEditDialogOpen] = useState<boolean>(false);
   const [imageToEdit, setImageToEdit] = useState<Image | null>(null);
+
+  // States for image viewing functionality
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState<boolean>(false);
+  const [imageViewing, setImageViewing] = useState<Image | null>(null);
 
   // States for category filtering
   const [categories, setCategories] = useState<Category[]>([]);
@@ -202,6 +207,18 @@ export function MediaLibrary({
     // For now, we rely on direct state update.
   };
 
+  // Function to open the view dialog
+  const handleViewClick = (image: Image) => {
+    setImageViewing(image);
+    setIsViewDialogOpen(true);
+  };
+
+  // Callback to open edit dialog directly from view dialog
+  const handleEditFromView = (image: Image) => {
+    setIsViewDialogOpen(false); // Close view dialog
+    handleEditClick(image); // Open edit dialog
+  };
+
   const content = (
     <div className={cn("flex flex-col", isStandalone ? "h-full" : "h-[70vh]")}>
       <Dialog>
@@ -211,12 +228,11 @@ export function MediaLibrary({
           </DialogTitle>
           <DialogDescription>
             {isStandalone
-              ? "Browse, edit, and delete your media assets."
+              ? "Browse, view, edit, and delete your media assets."
               : "Select from previously uploaded images or delete them."}
           </DialogDescription>
         </DialogHeader>
       </Dialog>
-
       {/* Category Filter */}
       <div className="w-full mb-4">
         {fetchingCategories ? (
@@ -281,7 +297,19 @@ export function MediaLibrary({
                         size="icon"
                         className="rounded-full"
                         onClick={(e) => {
-                          e.stopPropagation();
+                          e.stopPropagation(); // Prevent image select when clicking view
+                          handleViewClick(image);
+                        }}
+                        title="View Image"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="icon"
+                        className="rounded-full"
+                        onClick={(e) => {
+                          e.stopPropagation(); // Prevent image select when clicking edit
                           handleEditClick(image);
                         }}
                         title="Edit Image"
@@ -293,7 +321,7 @@ export function MediaLibrary({
                         size="icon"
                         className="rounded-full"
                         onClick={(e) => {
-                          e.stopPropagation();
+                          e.stopPropagation(); // Prevent image select when clicking delete
                           handleDeleteImage(image.id, image.s3Key);
                         }}
                         disabled={deletingImageId === image.id}
@@ -340,6 +368,16 @@ export function MediaLibrary({
           onClose={() => setIsEditDialogOpen(false)}
           image={imageToEdit}
           onImageUpdated={handleImageUpdated}
+        />
+      )}
+
+      {/* View Image Dialog */}
+      {isViewDialogOpen && imageViewing && (
+        <ViewImageDialog
+          isOpen={isViewDialogOpen}
+          onClose={() => setIsViewDialogOpen(false)}
+          image={imageViewing}
+          onEditClick={handleEditFromView} // Pass a callback to open edit dialog from here
         />
       )}
     </div>

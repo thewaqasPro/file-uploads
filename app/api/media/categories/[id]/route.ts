@@ -1,20 +1,37 @@
-// app/api/categories/[id]/route.ts
+// app/api/categories/[id]/route.ts (This should be in your app/api/media/categories/[id]/route.ts path)
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+
+// Define a more flexible context interface for route handlers
+// This helps to accommodate potential slight variations in how Next.js
+// infers the `params` object in complex or nested route structures.
+interface RouteContext {
+  params: {
+    [key: string]: string | string[] | undefined; // Allows for any string key, accommodating potential extra params
+    id: string; // Explicitly ensures the 'id' parameter is present as a string
+  };
+}
 
 /**
  * Handles DELETE requests to remove a category by its ID.
  * @param {Request} request - The incoming request object.
- * @param {Object} context - The context object containing route parameters.
- * @param {Object} context.params - The parameters object, including 'id' for the category to delete.
+ * @param {RouteContext} context - The context object containing route parameters.
  * @returns {NextResponse} A JSON response indicating success or failure.
  */
 export async function DELETE(
   request: Request,
-  context: { params: { id: string } } // Type definition for context with params.id
+  context: RouteContext // Use the more flexible RouteContext type
 ) {
   try {
-    const categoryId = await parseInt(context.params.id, 10); // Parse the category ID from the URL parameters
+    // Validate that context.params and context.params.id exist
+    if (!context.params || !context.params.id) {
+      return NextResponse.json(
+        { error: "Category ID not provided in route parameters." },
+        { status: 400 }
+      );
+    }
+
+    const categoryId = parseInt(context.params.id, 10); // Parse the category ID from the URL parameters
 
     if (isNaN(categoryId)) {
       // If the ID is not a valid number, return a 400 Bad Request error
@@ -25,6 +42,7 @@ export async function DELETE(
     }
 
     // Prevent deletion of the "Uncategorized" category
+    // Ensure `prisma.imageCategories` is the correct model name as per your schema.
     const uncategorizedCategory = await prisma.imageCategories.findUnique({
       where: { name: "Uncategorized" },
     });
@@ -35,12 +53,6 @@ export async function DELETE(
         { status: 403 } // Forbidden
       );
     }
-
-    // Before deleting the category, you might want to reassign images
-    // associated with it to "Uncategorized" or handle them in another way.
-    // For now, if a category is deleted, its relationship to images will be removed.
-    // If you need images to always have a category, you'll need more complex logic here.
-    // Prisma's default behavior for many-to-many is to just remove the join table entries.
 
     // Delete the category from the database
     const deletedCategory = await prisma.imageCategories.delete({
